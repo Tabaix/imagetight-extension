@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImageTight Edge Inspector</title>
+    <link rel="stylesheet" href="popup.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="header">
+        <div class="logo-area">
+            <!-- Inline SVG for Zap icon -->
+            <svg class="icon-primary" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <h1>IMAGETIGHT</h1>
+        </div>
+        <span class="badge">PRO</span>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" id="tab-scanner">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+            Audit Page
+        </button>
+        <button class="tab-btn" id="tab-settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            License
+        </button>
+    </div>
+
+    <!-- Scanner Content -->
+    <div id="content-scanner" class="tab-content">
+        <div class="action-card">
+            <h2 class="section-title">Media Inspector</h2>
+            <p class="section-desc">Scan the active tab to find unoptimized images slowing down Core Web Vitals.</p>
+            <button id="scan-btn" class="btn-primary">Scan Current Tab</button>
+        </div>
+
+        <div id="results" class="results-area">
+            <!-- Results injected here from popup.js -->
+        </div>
+    </div>
+
+    <!-- Settings Content -->
+    <div id="content-settings" class="tab-content hidden">
+        <div class="action-card">
+            <h2 class="section-title">Edge Authentication</h2>
+            <p class="section-desc">Enter your ImageTight Dashboard API Key to unlock remote compression directly from your browser.</p>
+            
+            <div class="form-group">
+                <label>Production API Key</label>
+                <input type="password" id="api-key-input" placeholder="Paste license key...">
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Output Format</label>
+                <select id="format-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px 12px; border-radius: 6px; font-size: 13px; outline: none; margin-bottom: 20px;">
+                    <option value="webp">WebP (Recommended for Web SEO)</option>
+                    <option value="avif">AVIF (Next-Gen, Extreme Compression)</option>
+                    <option value="jpeg">JPEG (Legacy / Universal)</option>
+                    <option value="png">PNG (Lossless / Transparent)</option>
+                </select>
+            </div>
+
+            <button id="save-key-btn" class="btn-primary">Save Settings</button>
+            <p class="help-text">Don't have one? <a href="https://imagetight.tabaix.com/dashboard" target="_blank" rel="noopener noreferrer">Get your key here</a>.</p>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
