@@ -59,6 +59,17 @@ h1 {
     letter-spacing: 1px;
 }
 
+.version-badge {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-muted);
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-left: 4px;
+}
+
 .tabs {
     display: flex;
     background: var(--bg-card);

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ImageTight Pro: Edge Inspector",
-  "version": "1.0.0",
-  "description": "Scan webpages for heavy images, identify SEO bottlenecks, and compress images instantly using Vercel Edge infrastructure.",
+  "version": "1.1.0",
+  "description": "Scan webpages for heavy images, identify SEO bottlenecks, and compress images to WebP/AVIF/JPEG instantly. Get your API key at imagetight.com/pricing.",
   "permissions": [
     "activeTab",
     "storage",

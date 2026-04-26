@@ -58,7 +58,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         resultsDiv.innerHTML = '<div class="empty-state"><p>Scan failed. Try refreshing the page.</p></div>';
                         return;
                     }
-                    renderImages(response.images);
+                    // Read format before rendering so click handlers have it in scope
+                    chrome.storage.local.get(['itc_format'], (store) => {
+                        const currentFormat = store.itc_format || 'webp';
+                        renderImages(response.images, currentFormat);
+                    });
                 });
             });
         } catch(err) {
@@ -75,7 +79,8 @@ function switchTab(tabId) {
     document.getElementById(`content-${tabId}`).classList.remove('hidden');
 }
 
-function renderImages(images) {
+function renderImages(images, currentFormat) {
+    currentFormat = currentFormat || 'webp';
     const container = document.getElementById('results');
     container.innerHTML = '';
 
@@ -124,7 +129,7 @@ function renderImages(images) {
         card.querySelector('.compress-btn').addEventListener('click', (e) => {
             const btn = e.currentTarget;
             // ─── Show Credit Confirmation Modal BEFORE calling API ───
-            showCreditConfirmModal(img.src, () => {
+            showCreditConfirmModal(img.src, currentFormat, () => {
                 // User confirmed — now spend the credit
                 btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
                 triggerCompression(img.src).then((success) => {
@@ -155,7 +160,7 @@ function renderImages(images) {
  * Shows a native-style confirmation modal before spending a credit.
  * onConfirm() is ONLY called if the user clicks YES.
  */
-function showCreditConfirmModal(imageUrl, onConfirm) {
+function showCreditConfirmModal(imageUrl, outputFormat, onConfirm) {
     // Remove any existing modal
     const old = document.getElementById('itc-confirm-modal');
     if (old) old.remove();
@@ -171,7 +176,7 @@ function showCreditConfirmModal(imageUrl, onConfirm) {
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                 </div>
                 <h3 class="modal-title">Use 1 Credit?</h3>
-                <p class="modal-desc">This will compress <strong>${filename}</strong> via Edge API and save it as WebP to your Downloads.</p>
+                <p class="modal-desc">This will compress <strong>${filename}</strong> via Edge API and save it as <strong>${outputFormat.toUpperCase()}</strong> to your Downloads.</p>
                 <div class="modal-credit-tag">💳 1 Credit will be deducted from your account</div>
                 <div class="modal-actions">
                     <button id="modal-cancel" class="modal-btn-cancel">Cancel — Free Scan Only</button>
@@ -194,7 +199,16 @@ async function triggerCompression(imageUrl) {
         chrome.storage.local.get(['itc_api_key'], async (result) => {
             const apiKey = result.itc_api_key;
             if (!apiKey) {
-                alert("Please authenticate your API key in Settings first.");
+                switchTab('settings');
+                // Show inline error in settings
+                const existing = document.getElementById('itc-key-error');
+                if (!existing) {
+                    const err = document.createElement('p');
+                    err.id = 'itc-key-error';
+                    err.style.cssText = 'color:#ef4444;font-size:12px;font-weight:700;margin-top:10px;';
+                    err.textContent = '⚠️ Please enter your API key to compress images.';
+                    document.getElementById('save-key-btn').after(err);
+                }
                 return resolve(false);
             }
 
