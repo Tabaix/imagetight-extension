@@ -1,21 +1,23 @@
 {
   "manifest_version": 3,
   "name": "ImageTight Pro: Edge Inspector",
-  "version": "1.1.0",
-  "description": "Scan webpages for heavy images, identify SEO bottlenecks, and compress images to WebP/AVIF/JPEG instantly. Get your API key at imagetight.com/pricing.",
+  "version": "2.0.0",
+  "description": "Audit any webpage for heavy images, missing alt text, and SEO issues. Compress to WebP/AVIF instantly. Get your API key at imagetight.com/pricing.",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
     "contextMenus",
-    "downloads"
+    "downloads",
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ImageTight Pro Inspector"
+    "default_title": "ImageTight Pro Inspector",
+    "default_icon": { "128": "icon.png" }
   },
   "background": {
     "service_worker": "background.js"
