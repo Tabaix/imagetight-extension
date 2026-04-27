@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "ImageTight Pro: Edge Inspector",
+  "name": "ImageTight — Image Compressor",
   "version": "2.0.0",
   "description": "Scan webpages for heavy images and SEO issues. Compress to WebP/AVIF instantly. Get your API key at imagetight.com/pricing.",
   "permissions": [
