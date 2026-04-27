@@ -10,12 +10,14 @@
 <body>
     <div class="header">
         <div class="logo-area">
-            <!-- Inline SVG for Zap icon -->
             <svg class="icon-primary" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
             <h1>IMAGETIGHT</h1>
         </div>
-        <span class="badge">PRO</span>
-        <span class="version-badge">v1.1.0</span>
+        <div class="header-right">
+            <span class="badge" id="credit-badge" title="Credits Remaining" style="display: none;">💳 --</span>
+            <span class="badge pro-badge">PRO</span>
+            <span class="version-badge">v2.0.0</span>
+        </div>
     </div>
 
     <div class="tabs">
@@ -31,10 +33,36 @@
 
     <!-- Scanner Content -->
     <div id="content-scanner" class="tab-content">
-        <div class="action-card">
+        <div class="action-card score-card hidden" id="score-card">
+            <div class="score-header">
+                <div class="score-title">
+                    <h2 class="section-title">Page Speed Audit</h2>
+                    <p class="section-desc" id="score-desc">Scan complete.</p>
+                </div>
+                <div class="score-circle" id="page-score">--</div>
+            </div>
+            <div class="score-stats">
+                <div class="stat"><span id="stat-total-weight">0 MB</span><label>Total Weight</label></div>
+                <div class="stat"><span id="stat-heavy-images" class="danger-text">0</span><label>Heavy (>250KB)</label></div>
+                <div class="stat"><span id="stat-missing-alt" class="warning-text">0</span><label>Missing Alt</label></div>
+            </div>
+            <button id="bulk-compress-btn" class="btn-primary" style="margin-top:16px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Compress All Heavy Images
+            </button>
+            <div id="bulk-progress" class="hidden" style="margin-top: 10px; font-size: 11px; text-align: center; color: var(--primary); font-weight: 700;"></div>
+        </div>
+
+        <div class="action-card" id="scan-intro-card">
             <h2 class="section-title">Media Inspector</h2>
-            <p class="section-desc">Scan the active tab to find unoptimized images slowing down Core Web Vitals.</p>
+            <p class="section-desc">Scan the active tab to find unoptimized images and SEO issues slowing down Core Web Vitals.</p>
             <button id="scan-btn" class="btn-primary">Scan Current Tab</button>
+        </div>
+
+        <div class="filter-bar hidden" id="filter-bar">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="heavy">Heavy</button>
+            <button class="filter-btn" data-filter="no-alt">Missing Alt</button>
         </div>
 
         <div id="results" class="results-area">

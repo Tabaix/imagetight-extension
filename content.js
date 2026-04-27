@@ -7,6 +7,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         
         // Remove old highlights
         document.querySelectorAll('.itc-highlight').forEach(el => el.classList.remove('itc-highlight'));
+        document.querySelectorAll('.itc-highlight-alt').forEach(el => el.classList.remove('itc-highlight-alt'));
 
         const imagePromises = imgs.map(async (img) => {
             let size = 0;
@@ -19,13 +20,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 size = 0;
             }
             
+            const hasAlt = img.hasAttribute('alt') && img.getAttribute('alt').trim() !== '';
+
             // Highlight heavy images to show the user visually
             if(size > 250000) { // > 250 KB
                 img.classList.add('itc-highlight');
                 img.style.outline = '4px solid #ef4444';
                 img.style.outlineOffset = '-4px';
                 img.style.transition = 'all 0.3s';
-                
+            } else if (!hasAlt) {
+                img.classList.add('itc-highlight-alt');
+                img.style.outline = '4px solid #f59e0b';
+                img.style.outlineOffset = '-4px';
+                img.style.transition = 'all 0.3s';
+            }
+            
+            if (size > 250000 || !hasAlt) {
                 // Dim on hover
                 img.onmouseenter = () => img.style.opacity = '0.5';
                 img.onmouseleave = () => img.style.opacity = '1';
@@ -35,7 +45,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 src: img.src,
                 size: size,
                 width: img.naturalWidth || img.clientWidth,
-                height: img.naturalHeight || img.clientHeight
+                height: img.naturalHeight || img.clientHeight,
+                hasAlt: hasAlt
             };
         });
 
@@ -52,3 +63,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true; // Keep channel open for async response
     }
 });
+
+// Auto-scan for badge when page loads
+setTimeout(() => {
+    const imgs = Array.from(document.querySelectorAll('img')).filter(img => img.src && img.src.startsWith('http'));
+    let heavyCount = 0;
+    
+    // Quick estimation based on dimensions if HEAD request is too slow/cors blocked
+    imgs.forEach(img => {
+        if (img.clientWidth * img.clientHeight > 400000) heavyCount++;
+    });
+    
+    if (heavyCount > 0) {
+        chrome.runtime.sendMessage({ action: "update_badge", count: heavyCount });
+    } else {
+        chrome.runtime.sendMessage({ action: "update_badge", count: 0 });
+    }
+}, 3000);

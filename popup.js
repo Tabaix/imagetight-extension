@@ -1,29 +1,38 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    let currentImages = [];
+    let currentFormat = 'webp';
+
     // Tab switching
     document.getElementById('tab-scanner').addEventListener('click', () => switchTab('scanner'));
     document.getElementById('tab-settings').addEventListener('click', () => switchTab('settings'));
 
-    // Load API Key & Format
+    // Check Credits & Load Format
     chrome.storage.local.get(['itc_api_key', 'itc_format'], (result) => {
         if (result.itc_api_key) {
             document.getElementById('api-key-input').value = result.itc_api_key;
+            // Fake credit fetch for now (you'll implement real API later)
+            const badge = document.getElementById('credit-badge');
+            badge.style.display = 'inline-block';
+            badge.innerText = '💳 Active'; // We'd show real credits if the Edge API sent it
         } else {
-            // Force them to settings if no key
             switchTab('settings');
         }
         if (result.itc_format) {
+            currentFormat = result.itc_format;
             document.getElementById('format-select').value = result.itc_format;
         }
     });
 
-    // Save API Key & Format
+    // Save Settings
     document.getElementById('save-key-btn').addEventListener('click', () => {
         const key = document.getElementById('api-key-input').value.trim();
         const format = document.getElementById('format-select').value;
+        currentFormat = format;
         chrome.storage.local.set({ itc_api_key: key, itc_format: format }, () => {
             const btn = document.getElementById('save-key-btn');
             const originalText = btn.innerText;
             btn.innerText = 'Settings Saved!';
+            document.getElementById('itc-key-error')?.remove();
             setTimeout(() => { btn.innerText = originalText; }, 2000);
         });
     });
@@ -37,7 +46,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab) throw new Error("No active tab");
 
-            // Avoid scanning chrome:// urls
             if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
                 resultsDiv.innerHTML = '<div class="empty-state"><p>Cannot scan internal browser pages.</p></div>';
                 return;
@@ -47,7 +55,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 target: { tabId: tab.id },
                 files: ['content.js']
             }, () => {
-                // Ignore the extension's own possible DOM error for missing execute
                 if (chrome.runtime.lastError) {
                     resultsDiv.innerHTML = `<div class="empty-state"><p>Access Denied. Reload page.</p></div>`;
                     return;
@@ -58,16 +65,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                         resultsDiv.innerHTML = '<div class="empty-state"><p>Scan failed. Try refreshing the page.</p></div>';
                         return;
                     }
-                    // Read format before rendering so click handlers have it in scope
-                    chrome.storage.local.get(['itc_format'], (store) => {
-                        const currentFormat = store.itc_format || 'webp';
-                        renderImages(response.images, currentFormat);
-                    });
+                    currentImages = response.images;
+                    updateScorePanel(currentImages);
+                    renderImages(currentImages, currentFormat);
                 });
             });
         } catch(err) {
             resultsDiv.innerHTML = `<div class="empty-state"><p>Error: ${err.message}</p></div>`;
         }
+    });
+
+    // Filtering
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            renderImages(currentImages, currentFormat, e.currentTarget.dataset.filter);
+        });
+    });
+
+    // Bulk Compress
+    document.getElementById('bulk-compress-btn').addEventListener('click', async () => {
+        const heavyImages = currentImages.filter(img => (img.size / 1024) > 250);
+        if (heavyImages.length === 0) return;
+        
+        showCreditConfirmModal(heavyImages.length, currentFormat, true, async () => {
+            const btn = document.getElementById('bulk-compress-btn');
+            const progress = document.getElementById('bulk-progress');
+            btn.disabled = true;
+            btn.innerHTML = 'Compressing...';
+            progress.classList.remove('hidden');
+            
+            let successCount = 0;
+            for (let i = 0; i < heavyImages.length; i++) {
+                progress.innerText = `Processing ${i+1} of ${heavyImages.length}...`;
+                // Trigger the individual button to show spinner
+                const imgBtn = document.querySelector(`.compress-btn[data-url="${heavyImages[i].src}"]`);
+                if (imgBtn) imgBtn.innerHTML = '<svg class="spin" ...></svg>'; // Simplified
+                
+                const res = await triggerCompression(heavyImages[i].src);
+                if (res && res.success) {
+                    successCount++;
+                    if(imgBtn) updateImgUIAfterSuccess(imgBtn, res.oldSize, res.newSize);
+                } else {
+                    if(imgBtn) imgBtn.innerHTML = 'Failed';
+                }
+            }
+            
+            progress.innerText = `Finished! Compressed ${successCount}/${heavyImages.length} images.`;
+            btn.innerHTML = 'Bulk Compress Complete';
+            setTimeout(() => progress.classList.add('hidden'), 5000);
+        });
     });
 });
 
@@ -79,34 +127,67 @@ function switchTab(tabId) {
     document.getElementById(`content-${tabId}`).classList.remove('hidden');
 }
 
-function renderImages(images, currentFormat) {
-    currentFormat = currentFormat || 'webp';
+function updateScorePanel(images) {
+    document.getElementById('scan-intro-card').classList.add('hidden');
+    document.getElementById('score-card').classList.remove('hidden');
+    document.getElementById('filter-bar').classList.remove('hidden');
+
+    let totalWeight = 0;
+    let heavyCount = 0;
+    let noAltCount = 0;
+
+    images.forEach(img => {
+        totalWeight += img.size;
+        if (img.size > 250000) heavyCount++;
+        if (!img.hasAlt) noAltCount++;
+    });
+
+    const mb = (totalWeight / (1024 * 1024)).toFixed(2);
+    document.getElementById('stat-total-weight').innerText = `${mb} MB`;
+    
+    const heavyEl = document.getElementById('stat-heavy-images');
+    heavyEl.innerText = heavyCount;
+    heavyEl.className = heavyCount > 0 ? 'danger-text' : 'success-text';
+
+    const altEl = document.getElementById('stat-missing-alt');
+    altEl.innerText = noAltCount;
+    altEl.className = noAltCount > 0 ? 'warning-text' : 'success-text';
+
+    const scoreEl = document.getElementById('page-score');
+    scoreEl.className = 'score-circle';
+    
+    let score = 100;
+    score -= heavyCount * 10;
+    score -= noAltCount * 2;
+    if (score < 0) score = 0;
+
+    scoreEl.innerText = score;
+    if (score < 50) scoreEl.classList.add('danger');
+    else if (score < 80) scoreEl.classList.add('warning');
+
+    const bulkBtn = document.getElementById('bulk-compress-btn');
+    if (heavyCount === 0) {
+        bulkBtn.style.display = 'none';
+    } else {
+        bulkBtn.style.display = 'flex';
+        bulkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Compress All ${heavyCount} Heavy`;
+    }
+}
+
+function renderImages(images, currentFormat, filter = 'all') {
     const container = document.getElementById('results');
     container.innerHTML = '';
 
-    if (images && images.length > 0) {
-        // Add free audit notice banner above results
-        const banner = document.createElement('div');
-        banner.className = 'audit-banner';
-        banner.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            <span><strong>Scan is FREE.</strong> Click the download icon to compress (costs 1 credit each).</span>
-        `;
-        container.appendChild(banner);
-    }
+    let filtered = images;
+    if (filter === 'heavy') filtered = images.filter(img => img.size > 250000);
+    if (filter === 'no-alt') filtered = images.filter(img => !img.hasAlt);
 
-    if (!images || images.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                <p>No valid images found on this page.</p>
-            </div>
-        `;
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state"><p>No images match this filter.</p></div>`;
         return;
     }
 
-    images.forEach(img => {
-        // Build card
+    filtered.forEach(img => {
         const card = document.createElement('div');
         card.className = 'img-item';
 
@@ -117,8 +198,10 @@ function renderImages(images, currentFormat) {
         card.innerHTML = `
             <img src="${img.src}" class="img-thumb" alt="Preview" onerror="this.src='icon.png'">
             <div class="img-info">
-                <div class="img-size ${isHeavy ? 'heavy' : ''}">${img.size > 0 ? formatSize : 'Unknown Size'}</div>
-                <div class="img-dim">${img.width}x${img.height} px</div>
+                <div class="img-size ${isHeavy ? 'heavy' : ''}">
+                    <span class="size-val">${img.size > 0 ? formatSize : 'Unknown Size'}</span>
+                </div>
+                <div class="img-dim">${img.width}x${img.height} px ${!img.hasAlt ? '<span class="alt-warning">Missing Alt</span>' : ''}</div>
                 <div class="img-url" title="${img.src}">${img.src}</div>
             </div>
             <button class="compress-btn" title="Compress via Remote API" data-url="${img.src}">
@@ -128,17 +211,16 @@ function renderImages(images, currentFormat) {
 
         card.querySelector('.compress-btn').addEventListener('click', (e) => {
             const btn = e.currentTarget;
-            // ─── Show Credit Confirmation Modal BEFORE calling API ───
-            showCreditConfirmModal(img.src, currentFormat, () => {
-                // User confirmed — now spend the credit
+            showCreditConfirmModal(1, currentFormat, false, () => {
                 btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
-                triggerCompression(img.src).then((success) => {
-                    if(success) {
-                        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                        btn.title = 'Compressed! Saved to Downloads.';
+                btn.disabled = true;
+                triggerCompression(img.src).then((res) => {
+                    if(res && res.success) {
+                        updateImgUIAfterSuccess(btn, res.oldSize, res.newSize);
                     } else {
                         btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
-                        btn.title = 'Failed. Check your API key.';
+                        btn.title = 'Failed. Check API key.';
+                        btn.disabled = false;
                     }
                 });
             });
@@ -147,25 +229,42 @@ function renderImages(images, currentFormat) {
         container.appendChild(card);
     });
 
-    // Add spin animation dynamically
-    const style = document.createElement('style');
-    style.innerHTML = `
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        .spin { animation: spin 1s linear infinite; }
-    `;
-    document.head.appendChild(style);
+    const style = document.getElementById('spin-style');
+    if (!style) {
+        const newStyle = document.createElement('style');
+        newStyle.id = 'spin-style';
+        newStyle.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } } .spin { animation: spin 1s linear infinite; }`;
+        document.head.appendChild(newStyle);
+    }
 }
 
-/**
- * Shows a native-style confirmation modal before spending a credit.
- * onConfirm() is ONLY called if the user clicks YES.
- */
-function showCreditConfirmModal(imageUrl, outputFormat, onConfirm) {
-    // Remove any existing modal
+function updateImgUIAfterSuccess(btn, oldSize, newSize) {
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    btn.title = 'Compressed! Saved to Downloads.';
+    btn.style.background = 'rgba(34,197,94,0.1)';
+    btn.style.borderColor = 'rgba(34,197,94,0.5)';
+    
+    // Update size text
+    const infoDiv = btn.parentElement.querySelector('.img-size');
+    if (infoDiv && oldSize && newSize) {
+        const savedPercent = Math.round(((oldSize - newSize) / oldSize) * 100);
+        infoDiv.classList.remove('heavy');
+        const newKb = Math.round(newSize / 1024);
+        infoDiv.innerHTML = `
+            <span class="size-val">${newKb} KB</span>
+            <span class="saved-badge">-${savedPercent}%</span>
+        `;
+    }
+}
+
+function showCreditConfirmModal(count, outputFormat, isBulk, onConfirm) {
     const old = document.getElementById('itc-confirm-modal');
     if (old) old.remove();
 
-    const filename = imageUrl.split('/').pop().split('?')[0].substring(0, 30);
+    const title = isBulk ? `Use ${count} Credits?` : `Use 1 Credit?`;
+    const desc = isBulk 
+        ? `This will compress <strong>${count} heavy images</strong> to ${outputFormat.toUpperCase()} and download them.`
+        : `This will compress this image via Edge API and save it as <strong>${outputFormat.toUpperCase()}</strong>.`;
 
     const modal = document.createElement('div');
     modal.id = 'itc-confirm-modal';
@@ -175,12 +274,12 @@ function showCreditConfirmModal(imageUrl, outputFormat, onConfirm) {
                 <div class="modal-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                 </div>
-                <h3 class="modal-title">Use 1 Credit?</h3>
-                <p class="modal-desc">This will compress <strong>${filename}</strong> via Edge API and save it as <strong>${outputFormat.toUpperCase()}</strong> to your Downloads.</p>
-                <div class="modal-credit-tag">💳 1 Credit will be deducted from your account</div>
+                <h3 class="modal-title">${title}</h3>
+                <p class="modal-desc">${desc}</p>
+                <div class="modal-credit-tag">💳 ${count} Credit(s) will be deducted</div>
                 <div class="modal-actions">
-                    <button id="modal-cancel" class="modal-btn-cancel">Cancel — Free Scan Only</button>
-                    <button id="modal-confirm" class="modal-btn-confirm">Yes, Use 1 Credit</button>
+                    <button id="modal-cancel" class="modal-btn-cancel">Cancel</button>
+                    <button id="modal-confirm" class="modal-btn-confirm">Yes, Proceed</button>
                 </div>
             </div>
         </div>
@@ -200,7 +299,6 @@ async function triggerCompression(imageUrl) {
             const apiKey = result.itc_api_key;
             if (!apiKey) {
                 switchTab('settings');
-                // Show inline error in settings
                 const existing = document.getElementById('itc-key-error');
                 if (!existing) {
                     const err = document.createElement('p');
@@ -209,21 +307,20 @@ async function triggerCompression(imageUrl) {
                     err.textContent = '⚠️ Please enter your API key to compress images.';
                     document.getElementById('save-key-btn').after(err);
                 }
-                return resolve(false);
+                return resolve({success: false});
             }
 
             try {
-                // Tell background to handle the download logic to bypass CORS restrictions in popup
                 chrome.runtime.sendMessage({
                     action: "download_compress", 
                     url: imageUrl, 
                     apiKey: apiKey 
                 }, (response) => {
-                    resolve(response && response.success);
+                    resolve(response);
                 });
             } catch(e) {
                 console.error(e);
-                resolve(false);
+                resolve({success: false});
             }
         });
     });

@@ -16,16 +16,25 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
 });
 
-// Handle messages from the Browser Action (Popup)
+// Handle messages from the Browser Action (Popup) or Content
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'download_compress') {
         processImage(request.url, request.apiKey)
-            .then(() => sendResponse({ success: true }))
+            .then((result) => sendResponse({ success: true, ...result }))
             .catch((e) => {
                 console.error("Compression Failed:", e);
                 sendResponse({ success: false });
             });
         return true; // async response
+    }
+    
+    if (request.action === 'update_badge' && sender.tab) {
+        if (request.count > 0) {
+            chrome.action.setBadgeText({ text: request.count.toString(), tabId: sender.tab.id });
+            chrome.action.setBadgeBackgroundColor({ color: '#EF4444' });
+        } else {
+            chrome.action.setBadgeText({ text: '', tabId: sender.tab.id });
+        }
     }
 });
 
@@ -56,11 +65,11 @@ async function handleImageCompression(imageUrl, tabId) {
 // Reusable workflow for both Context Menu and Popup
 async function processImage(imageUrl, apiKey) {
     // 1. Fetch the image locally into memory as a Blob
-    // This allows us to process HEIC, AVIF, etc natively since Vercel Sharp will handle the reading!
     const response = await fetch(imageUrl);
     if (!response.ok) throw new Error("Could not fetch the original image. Check CORS.");
     
     const imageBlob = await response.blob();
+    const oldSize = imageBlob.size;
     
     // 1b. Get the chosen output format from storage (default WebP)
     const storageResult = await chrome.storage.local.get(['itc_format']);
@@ -92,6 +101,7 @@ async function processImage(imageUrl, apiKey) {
 
     // 4. Get optimized Blob
     const optimizedBlob = await compressRes.blob();
+    const newSize = optimizedBlob.size;
     
     // Determine exact extension based on API response headers
     let finalExt = desiredFormat;
@@ -110,8 +120,10 @@ async function processImage(imageUrl, apiKey) {
         chrome.downloads.download({
             url: dataUrl,
             filename: `optimized_${baseName}.${finalExt}`,
-            saveAs: true // Let user choose where to save
+            saveAs: false // Changed to false for bulk downloads without dialog hell
         });
     };
     reader.readAsDataURL(optimizedBlob);
+    
+    return { oldSize, newSize };
 }
