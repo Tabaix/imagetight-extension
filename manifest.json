@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ImageTight Pro: Edge Inspector",
   "version": "2.0.0",
-  "description": "Audit any webpage for heavy images, missing alt text, and SEO issues. Compress to WebP/AVIF instantly. Get your API key at imagetight.com/pricing.",
+  "description": "Scan webpages for heavy images and SEO issues. Compress to WebP/AVIF instantly. Get your API key at imagetight.com/pricing.",
   "permissions": [
     "activeTab",
     "storage",
