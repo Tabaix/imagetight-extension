@@ -1,0 +1,4 @@
+﻿{
+  "extName": { "message": "ImageTight — 이미지 압축기" },
+  "extDesc": { "message": "웹페이지의 무거운 이미지를 스캔하고 즉시 WebP/AVIF로 압축합니다. imagetight.com/pricing에서 API 키를 받으세요." }
+}
