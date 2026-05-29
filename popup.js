@@ -36,6 +36,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateEngineUI(currentEngine);
     });
 
+    // ── Format select: update live output format for compression ────────────
+    document.getElementById('format-select').addEventListener('change', (e) => {
+        currentFormat = e.target.value;
+    });
+
     // ── Save Settings ────────────────────────────────────────────────────────
     document.getElementById('save-key-btn').addEventListener('click', () => {
         const key       = document.getElementById('api-key-input').value.trim();
@@ -135,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let i = 0; i < heavyImages.length; i++) {
             progress.innerText = `Processing ${i + 1} of ${heavyImages.length}...`;
             const imgBtn = document.querySelector(`.compress-btn[data-url="${CSS.escape(heavyImages[i].src)}"]`);
-            const res = await triggerCompression(heavyImages[i].src);
+            const res = await triggerCompression(heavyImages[i].src, currentFormat);
             if (res && res.success) {
                 successCount++;
                 if (imgBtn) updateImgUIAfterSuccess(imgBtn, res.oldSize, res.newSize);
@@ -324,7 +329,7 @@ function renderImages(images, currentFormat, filter = 'all') {
                 const doCompress = () => {
                     btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
                     btn.disabled = true;
-                    triggerCompression(img.src).then((res) => {
+                    triggerCompression(img.src, currentFormat).then((res) => {
                         if (res && res.success) {
                             updateImgUIAfterSuccess(btn, res.oldSize, res.newSize);
                         } else {
@@ -471,11 +476,12 @@ function showCreditConfirmModal(count, outputFormat, isBulk, onConfirm) {
 }
 
 // ── Trigger Cloud/Local Compression ──────────────────────────────────────────
-async function triggerCompression(imageUrl) {
+async function triggerCompression(imageUrl, format) {
     return new Promise((resolve) => {
-        chrome.storage.local.get(['itc_api_key', 'itc_engine'], (result) => {
+        chrome.storage.local.get(['itc_api_key', 'itc_engine', 'itc_format'], (result) => {
             const apiKey = result.itc_api_key;
             const engine = result.itc_engine || 'local';
+            const desiredFormat = format || result.itc_format || 'webp';
 
             if (engine === 'cloud' && !apiKey) {
                 switchTab('settings');
@@ -491,7 +497,7 @@ async function triggerCompression(imageUrl) {
             }
 
             chrome.runtime.sendMessage(
-                { action: 'download_compress', url: imageUrl, apiKey, engine },
+                { action: 'download_compress', url: imageUrl, apiKey, engine, format: desiredFormat },
                 (response) => resolve(response || { success: false, error: 'No response from background.' })
             );
         });
