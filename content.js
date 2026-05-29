@@ -21,6 +21,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }
             
             const hasAlt = img.hasAttribute('alt') && img.getAttribute('alt').trim() !== '';
+            const altText = img.getAttribute('alt') || '';
 
             // Highlight heavy images to show the user visually
             if(size > 250000) { // > 250 KB
@@ -46,7 +47,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 size: size,
                 width: img.naturalWidth || img.clientWidth,
                 height: img.naturalHeight || img.clientHeight,
-                hasAlt: hasAlt
+                hasAlt: hasAlt,
+                alt: altText
             };
         });
 

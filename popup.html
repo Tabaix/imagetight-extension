@@ -16,7 +16,7 @@
         <div class="header-right">
             <span class="badge" id="credit-badge" title="Credits Remaining" style="display: none;">💳 --</span>
             <span class="badge pro-badge">PRO</span>
-            <span class="version-badge">v2.0.0</span>
+            <span class="version-badge">v2.1.0</span>
         </div>
     </div>
 
@@ -50,6 +50,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Compress All Heavy Images
             </button>
+            <button id="bulk-download-btn" class="btn-secondary" style="margin-top:8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download All Scanned Originals
+            </button>
             <div id="bulk-progress" class="hidden" style="margin-top: 10px; font-size: 11px; text-align: center; color: var(--primary); font-weight: 700;"></div>
         </div>
 
@@ -73,12 +77,27 @@
     <!-- Settings Content -->
     <div id="content-settings" class="tab-content hidden">
         <div class="action-card">
-            <h2 class="section-title">Edge Authentication</h2>
-            <p class="section-desc">Enter your ImageTight API Key to unlock 1-click remote compression. Get a key from the Pricing page — plans start from $3.</p>
+            <h2 class="section-title">Credentials Configuration</h2>
+            <p class="section-desc">Configure your API access below. You can use ImageTight Cloud for compression or your own Google Gemini Key for free Alt Text.</p>
             
             <div class="form-group">
-                <label>Production API Key</label>
+                <label>Compression Engine</label>
+                <select id="engine-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px 12px; border-radius: 6px; font-size: 13px; outline: none; margin-bottom: 8px;">
+                    <option value="local">Local Browser (Free &amp; Unlimited)</option>
+                    <option value="cloud">ImageTight Cloud (Paid PRO Edge)</option>
+                </select>
+                <p id="engine-note" style="font-size: 10px; color: var(--text-muted); margin-bottom: 12px;">🆓 Local mode: compression runs entirely in your browser — no credits used.</p>
+            </div>
+
+            <div class="form-group" id="cloud-key-group">
+                <label>ImageTight API Key <span style="font-size:10px; color: var(--text-muted);">(required for Cloud mode &amp; Paid Alt Text)</span></label>
                 <input type="password" id="api-key-input" placeholder="Paste license key...">
+            </div>
+
+            <div class="form-group" style="margin-top: 12px;">
+                <label>Google Gemini API Key (Free Alt Text)</label>
+                <input type="password" id="gemini-key-input" placeholder="AI Studio Key (Optional)...">
+                <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Get a free API key from <a href="https://aistudio.google.com/" target="_blank" style="color: var(--primary); text-decoration: none;">Google AI Studio</a> to generate Alt Texts directly from your browser without using ImageTight credits.</p>
             </div>
 
             <div class="form-group" style="margin-top: 20px;">

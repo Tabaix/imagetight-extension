@@ -219,3 +219,79 @@ h1 { font-size: 18px; font-weight: 900; font-style: italic; letter-spacing: 1px;
 .modal-btn-confirm:hover { background: var(--primary-hover); }
 .modal-btn-cancel { width: 100%; background: transparent; color: var(--text-muted); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
 .modal-btn-cancel:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+
+/* AI Alt Text & Dynamic Actions */
+.img-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.alt-btn {
+    background: rgba(168, 85, 247, 0.1);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alt-btn:hover {
+    background: #a855f7;
+    color: white;
+    border-color: #a855f7;
+}
+
+.alt-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.alt-text-container {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: fadeIn 0.3s ease;
+}
+
+.alt-label {
+    font-weight: 900;
+    color: #c084fc;
+    text-transform: uppercase;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+.alt-val {
+    flex: 1;
+    color: var(--text-main);
+    font-size: 11px;
+    line-height: 1.3;
+    font-weight: 600;
+}
+
+.copy-alt-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.copy-alt-btn:hover {
+    opacity: 1;
+}
+
