@@ -1,4 +1,4 @@
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+i have the google seach chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'scan_images') {
         const imgs = Array.from(document.querySelectorAll('img'))
             .filter(img => img.src && img.src.startsWith('http'))
