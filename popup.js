@@ -77,10 +77,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab) throw new Error('No active tab');
 
+            const tabUrl = tab.url || '';
             if (
-                tab.url.startsWith('chrome://') ||
-                tab.url.startsWith('edge://') ||
-                tab.url.startsWith('about:')
+                tabUrl.startsWith('chrome://') ||
+                tabUrl.startsWith('edge://') ||
+                tabUrl.startsWith('about:')
             ) {
                 resultsDiv.innerHTML = '<div class="empty-state"><p>Cannot scan internal browser pages.</p></div>';
                 return;
@@ -97,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         resultsDiv.innerHTML = '<div class="empty-state"><p>Scan failed. Try refreshing the page.</p></div>';
                         return;
                     }
-                    currentImages = response.images;
+                    currentImages = Array.isArray(response.images) ? response.images : [];
                     updateScorePanel(currentImages);
                     renderImages(currentImages, currentFormat);
                 });
