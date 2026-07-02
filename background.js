@@ -139,6 +139,10 @@ async function processImage(imageUrl, apiKey, engine = 'local', format) {
         return { oldSize, newSize };
 
     } else {
+        if (!apiKey) {
+            throw new Error('Cloud mode requires an ImageTight API key.');
+        }
+
         // ── PAID: ImageTight Cloud API ──
         const response = await fetch(imageUrl);
         if (!response.ok) throw new Error('Could not fetch image. Check CORS.');

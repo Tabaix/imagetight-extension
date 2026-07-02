@@ -122,6 +122,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const heavyImages = currentImages.filter(img => (img.size / 1024) > 250);
         if (heavyImages.length === 0) return;
 
+        if (currentEngine === 'cloud') {
+            const stored = await new Promise((resolve) => chrome.storage.local.get(['itc_api_key'], resolve));
+            if (!stored.itc_api_key) {
+                switchTab('settings');
+                const existing = document.getElementById('itc-key-error');
+                if (!existing) {
+                    const err = document.createElement('p');
+                    err.id = 'itc-key-error';
+                    err.style.cssText = 'color:#ef4444;font-size:12px;font-weight:700;margin-top:10px;';
+                    err.textContent = '⚠️ Cloud bulk compress requires an ImageTight API key.';
+                    document.getElementById('save-key-btn')?.after(err);
+                }
+                return;
+            }
+        }
+
         // Free local mode skips credit modal
         if (currentEngine === 'local') {
             await runBulkCompress(heavyImages);
@@ -478,30 +494,28 @@ function showCreditConfirmModal(count, outputFormat, isBulk, onConfirm) {
 
 // ── Trigger Cloud/Local Compression ──────────────────────────────────────────
 async function triggerCompression(imageUrl, format) {
+    const apiKey = await new Promise((resolve) => chrome.storage.local.get(['itc_api_key'], resolve)).then((result) => result.itc_api_key);
+    const engine = currentEngine || 'local';
+    const desiredFormat = format || currentFormat || 'webp';
+
+    if (engine === 'cloud' && !apiKey) {
+        switchTab('settings');
+        const existing = document.getElementById('itc-key-error');
+        if (!existing) {
+            const err = document.createElement('p');
+            err.id = 'itc-key-error';
+            err.style.cssText = 'color:#ef4444;font-size:12px;font-weight:700;margin-top:10px;';
+            err.textContent = '⚠️ Cloud mode requires an ImageTight API key.';
+            document.getElementById('save-key-btn')?.after(err);
+        }
+        return { success: false, error: 'No API key for cloud mode.' };
+    }
+
     return new Promise((resolve) => {
-        chrome.storage.local.get(['itc_api_key', 'itc_engine', 'itc_format'], (result) => {
-            const apiKey = result.itc_api_key;
-            const engine = result.itc_engine || 'local';
-            const desiredFormat = format || result.itc_format || 'webp';
-
-            if (engine === 'cloud' && !apiKey) {
-                switchTab('settings');
-                const existing = document.getElementById('itc-key-error');
-                if (!existing) {
-                    const err = document.createElement('p');
-                    err.id = 'itc-key-error';
-                    err.style.cssText = 'color:#ef4444;font-size:12px;font-weight:700;margin-top:10px;';
-                    err.textContent = '⚠️ Cloud mode requires an ImageTight API key.';
-                    document.getElementById('save-key-btn')?.after(err);
-                }
-                return resolve({ success: false, error: 'No API key for cloud mode.' });
-            }
-
-            chrome.runtime.sendMessage(
-                { action: 'download_compress', url: imageUrl, apiKey, engine, format: desiredFormat },
-                (response) => resolve(response || { success: false, error: 'No response from background.' })
-            );
-        });
+        chrome.runtime.sendMessage(
+            { action: 'download_compress', url: imageUrl, apiKey, engine, format: desiredFormat },
+            (response) => resolve(response || { success: false, error: 'No response from background.' })
+        );
     });
 }
 
